@@ -1,0 +1,26 @@
+Package: tottagpipe
+Title: Pipeline to Process and Clean Data from TotTag Devices
+Version: 0.0.0.9000
+Authors@R: 
+    person("Christian", "Strauss", , "christian.strauss@vanderbilt.edu", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0005-2536-4702"))
+Description: This package processes, graphs, and cleans data offloaded from tottag devices. 
+  The current pipeline requires properly organized and named .pkl files to run properly. 
+  Using the primary function data_pipeline, these files are then converted to .Rdata files, 
+  with the addition of variables designed to assess the quality of offloaded data. 
+  Raw data can then be graphed creating a systematic .Rmarkdown file which provides text and 
+  graphical quality metrics. Finally, data is cleaned utilizing user-inputted cut-offs for 
+  defining likely off-body devices.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports: 
+    data.table,
+    dplyr,
+    magrittr,
+    purrr,
+    readxl,
+    reticulate,
+    zoo
