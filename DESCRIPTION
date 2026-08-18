@@ -24,3 +24,5 @@ Imports:
     readxl,
     reticulate,
     zoo
+URL: https://github.com/cllstrauss/tottagpipe
+BugReports: https://github.com/cllstrauss/tottagpipe/issues
