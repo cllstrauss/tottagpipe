@@ -20,7 +20,7 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
   ###edit internally to clean CARE data
   if (!exists("device_dates", envir = .GlobalEnv)) {
     device_dates <- readxl::read_excel(
-      'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking.xlsx')
+      'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking_CARE.xlsx')
   }
 
   #find corresponding family and wave to extract start
@@ -44,8 +44,15 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
       datetime >= start_date & datetime <= end_date),
       envir = .GlobalEnv)}
 
+  #print warning if any files are empty as that will blow-up the pipeline
+  empty_dfs <- names(dfs)[sapply(names(dfs), function(x) nrow(get(x, envir = .GlobalEnv)) == 0)]
+
+  if (length(empty_dfs) > 0) {
+    stop("ERROR: The following data frames have 0 rows after trimming: ", paste(empty_dfs, collapse = ", "))
+  }
+
   #repopulate dfs from global environment after trimming
-  dfs <- mget(names(dfs), envir = .GlobalEnv)
+  #dfs <- mget(names(dfs), envir = .GlobalEnv)
 
   #store all trimmed dfs except family df into a generic named list to loop through
   person_dfs <- dfs[!grepl("\\d{5}$", names(dfs))]
@@ -393,9 +400,6 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
 
       #repopulate person_dfs from the updated list
       person_dfs <- dfs[!grepl("\\d{5}$", names(dfs))]
-    }  else {
-
-      warning(paste('No ranging data between', person1, 'and', person2))
     }
   }
 
@@ -484,7 +488,7 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
 
       } else {
         #error message for when troubleshooting within function
-        warning(paste("Skipping pair", pair_name, "potentially missing ranging data between this pair, please carefully review rmm columns"))
+        warning(paste("Skipping pair", pair_name, "for family", family_df$family_id[1], ". There is potentially missing ranging data between this pair, please carefully review rmm columns"))
       }
     }
 

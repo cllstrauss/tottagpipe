@@ -404,7 +404,7 @@ prepare_data <- function(folder_path, age, out_folder) {
 
       } else {
         #error message for when troubleshooting within function
-        warning(paste("Skipping pair", pair_name, "potentially missing ranging data between this pair, please carefully review rmm columns"))
+        warning(paste("Skipping pair", pair_name, "for family", family_df$family_id[1], ". There is potentially missing ranging data between this pair, please carefully review rmm columns"))
       }
     }
 

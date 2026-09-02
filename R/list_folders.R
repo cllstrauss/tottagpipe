@@ -32,17 +32,23 @@ list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T) 
   pkl_files <- list.files(subfolders, pattern = "\\.pkl$",
                           recursive = F, full.names = T)
 
+  #initialize diagnostics
+  one_kb_files <- character(0)
+  invalid_names <- character(0)
+
   #extract file sizes is filter is set to T
   if (one_kb_filter) {
   file_sizes <- file.info(pkl_files)$size
 
     #define small files as files at or less than 1KB
-    small_files <- pkl_files[file_sizes <= 1000]
+    one_kb_files <- pkl_files[file_sizes <= 1000]
 
     #print warning if any files are 1KB or less
-    if (length(small_files) > 0) {
-      warning("The following .pkl files are 1 KB or smaller:\n", paste(small_files, collapse = "\n"))
-      warning("Do NOT proceed with data_pipeline until these files are reviewed")
+    if (length(one_kb_files) > 0) {
+      warning(
+        length(one_kb_files), ' .pkl file(s) are 1 KB or smaller. ',
+        'Access with attr(result, "one_kb_files"). ',
+        'Folders containing these .pkl files will be dropped from the final folder list.')
     } #end internal if statement
   } #end file size check
 
@@ -57,11 +63,22 @@ list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T) 
     invalid_names <- pkl_files[!grepl(valid_pattern, filenames)]
 
     if (length(invalid_names) > 0) {
-      warning("The following .pkl files have invalid filenames:\n",
-        paste(invalid_names, collapse = "\n"))
-      warning("Do NOT proceed with data_pipeline until these files are correctly named")
+      warning(
+      length(invalid_names), ' .pkl file(s) have invalid filenames. ',
+      'Access with attr(result, "invalid_names"). ',
+      'Folders containing these .pkl files will be dropped from the final folder list.')
     } #end internal if statement
   } #end file naming scheme check
 
-  return(unique(dirname(pkl_files)))
+  #locate all problematic .pkl files
+  problem_folders <- dirname(c(one_kb_files, invalid_names))
+
+  #remove problematic folders from outputted folder list
+  final_list <- setdiff(unique(dirname(pkl_files)), problem_folders)
+
+  #attach diagnostic information
+  attr(final_list, "one_kb_files") <- one_kb_files
+  attr(final_list, "invalid_names") <- invalid_names
+
+  return(final_list)
 }

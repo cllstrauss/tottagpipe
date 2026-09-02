@@ -3,7 +3,7 @@ data_pipeline <- function(folder_path, age,
                           false_movement = 5, zero_ranging = 5,
                           create_graphics = TRUE, clean_data = TRUE,
                           rmd_file = "graphics_V5.Rmd",
-                          out_folder, out_folder_clean) {
+                          out_folder, out_folder_graphics, out_folder_clean) {
 
   if (length(folder_path) > 1) {
 
@@ -19,6 +19,7 @@ data_pipeline <- function(folder_path, age,
           clean_data = clean_data,
           rmd_file = rmd_file,
           out_folder = out_folder,
+          out_folder_graphics = out_folder_graphics,
           out_folder_clean = out_folder_clean)})
     return(invisible(NULL)) #stop if batched run is called
   }
@@ -34,14 +35,17 @@ data_pipeline <- function(folder_path, age,
   #create graphics file if create_graphics == TRUE
   if (create_graphics) {
 
-    #update wd to graphics folder
-    setwd('X:/Daily_2/ABC/tottag R code/Data Pipeline/Graphics Files')
+    #set directory to save graphics files
+    graphics_dir <- out_folder_graphics
 
     #create filename for graphics file
-    graphics_rmd <- paste0("graphics_", family_id, "_", age, "_V5.Rmd")
+    graphics_rmd <- file.path(graphics_dir, paste0("graphics_", family_id, "_", age, "_V5.Rmd"))
+
+    #locate the graphics template included with the package
+    graphics_template <- system.file('GraphicsV5.Rmd', package = "tottagpipe")
 
     #copy original graphics file into new file name
-    file.copy(from = "GraphicsV5.Rmd", to = graphics_rmd, overwrite = TRUE)
+    file.copy(from = graphics_template, to = graphics_rmd, overwrite = TRUE)
 
     #ensure age and family id are readily available in global environment
     assign("age", age, envir = .GlobalEnv)

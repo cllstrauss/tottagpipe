@@ -1,0 +1,362 @@
+---
+title: "Data Quality Check"
+author: "SEAlab"
+date: "`r format(Sys.time(), 'Compiled %X on %A, %B %d, %Y')`"
+output: pdf_document
+---
+
+# Data Quality
+
+```{r, include=FALSE}
+library(knitr)
+library(tidyverse)
+library(ggrastr)
+library(gridExtra)
+library(readxl)
+
+#to knit
+
+#rmarkdown::render("X:/Daily_2/ABC/tottag R code/Data Pipeline/Graphics Files/GraphicsV5.Rmd",envir = globalenv())
+
+#to remove everything from global environment except the device schedule
+#rm(list = ls()[!(grepl("^family", ls()) | grepl("^prepare_data", ls()))])
+```
+
+```{r, include=FALSE}
+##code chunk will not print in .pdf
+
+#extract all objects from the global environment
+all_objects <- ls(envir = .GlobalEnv, pattern = paste0("^df_", age, "_", family_id))
+
+#filter for only data frames
+dfs <- mget(all_objects, envir = .GlobalEnv)
+
+#save dataframes in dfs to be used for plotting
+dfs <- Filter(is.data.frame, dfs)
+
+#extract five digit family id from names of dataframes
+family_id <- unique(sub(".*?(\\d{5}).*", "\\1", names(dfs)))
+
+#extract age
+age <- unique(sub(paste0(".*_([A-Za-z0-9]+)_", family_id, ".*"), "\\1", names(dfs)))
+
+#read in device dates if not already in global environment
+if (!exists("device_dates", envir = .GlobalEnv)) {
+  device_dates <- read_excel(
+    'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking_CARE.xlsx')}
+  
+#find corresponding family and wave to extract start
+#and end date
+device_dates_fam <- device_dates %>%
+  filter(.data$family_id == .env$family_id,
+          .data$age == .env$age)
+  
+  #set start and end date
+  #eventually extract these from file
+  start_date <- device_dates_fam$start_date[1]
+  start_date <- as.POSIXct(paste(start_date, "00:00:00"), tz = "America/Chicago")
+  
+  end_date   <- device_dates_fam$end_date[1]
+  end_date <- as.POSIXct(paste(end_date, "23:59:59"), tz = "America/Chicago")
+
+#subset every dataset to only the user-specified start and end date
+dfs <- lapply(dfs, function(df) {
+  df[df$datetime >= start_date & df$datetime <= end_date, ]
+})
+
+#create list that does not include family data 
+#by dropping the dataframe that has the largest number of variables
+dfs_person <- dfs[-which.max(sapply(dfs, ncol))]
+```
+
+# Individual Data Quality Checks
+
+The following section generates four graphics per *individual* person's data within the specified family.
+
+1. The first graphic depicts different "states" the tottag can be in, color-coded. Blue sections depict tottags in a FALSE movement state. Long periods of time in this state may suggest the tottag is off-body. Cyan sections depict tottags ranging exactly 0 mm from another tottag. Long periods of time in this state may suggest the ranging tottags are off-body. Black sections depict tottags that are not ranging with any other tottags. Long periods of time in this state may suggest that person has left the study area. Red sections denote time readings greater than 4.9 minutes. These likely imply the tottag is on the charger.
+
+2. The second graphic depicts voltage readings and potential incorrect movement readings. Movement violations are not problematic if they occur after the TotTag is placed on its charger. By plotting voltage across time *with* flagged movement violations we can infer the extent to which these violations may simply be due to the tottag resetting by being placed on the charger.
+
+3. The third graphic depicts difference in millimeter closeness readings for all other nearby tottags. The x-axis shows the difference in timestamp readings. If milimeter differences are large, but timestamp readings are also far apart, the differences are likely plausable. Instead, if milimeter differences are large but timestamp readings are close together, the differences may not be plausable and may indicate errors in reading.
+
+4. The fourth graphic is a table printing the timestamp where a movement violation occured. This is meant to augment the previous graphic, improving interpretability of movement violation marks.
+
+5. The fifth graphic is a frequency recording the number of times voltage readings met pre-defined cut-offs:
+
+- Voltage = 4200: fully charged
+- 3680 > Voltage > 3500: battery low
+- Voltage > 3500: battery dead
+
+Zero counts for battery low and/or battery suggest no low voltage readings in the data.
+
+6. The final table prints any out-of-time-order row. These were sorted in processing to be in order, but should be tracked for any notable patterns
+
+```{r, echo=FALSE, results = 'asis', fig.width = 7, fig.height = 10, warning=FALSE, dev = "png", dpi = 300}
+for(i in 1:length(dfs_person)) {
+  
+  #create legend for first plot
+  legend_df <- data.frame(x = 1, y = c(4, 3, 2, 1),
+  label = c(
+    "Time spent in FALSE movement state",
+    "Time spent ranging exactly 0 mm with at least one other TotTag",
+    "Time spent not ranging with any other TotTags",
+    "Time differences greater than 4.9 minutes"
+  ),color = c("blue", "cyan", "black", "red"))
+
+  #make plot of legend
+    p_legend <- ggplot(legend_df, aes(x, y, color = color)) +
+      geom_point(size = 2) +
+      geom_text(aes(label = label), hjust = 0, nudge_x = 0.1, color = "black", size = 3) +
+      scale_color_identity() +
+      xlim(1, 3) +
+      theme_void()
+  
+  #create first plot
+    p1 <- ggplot(data = dfs_person[[i]]) +
+    geom_point(size = .5, aes(x = datetime, y = m_FALSE),
+               color = "blue") + #plot time spent in false movement state
+    geom_point(size = .5, aes(x = datetime, y = rmm_0),
+               color = "cyan", alpha = .1) + #plot time spent ranging 0 from other tottags
+    geom_point(size = .5, aes(x = datetime, y = rmm_NA)) + #plot time spent not ranging with other tottags
+    geom_point(
+      data = subset(dfs_person[[i]], time_diff_min_4.9 == TRUE),
+      aes(x = datetime, y = 0.00),   
+      color = "red", size = 1 ) + #plot time differences around 5 minutes
+    scale_y_log10(breaks = c(1, 5, 10, 30, 60, 120, 240)) +
+    scale_x_datetime(date_breaks = "6 hours", date_labels = "%m-%d \n%H:%M") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "Date", y = " ",
+         title = paste("Figure", 3*(i-1) + 1, "Time spent in varying states \nfor", names(dfs_person)[i]))
+    
+    #print stacked using grid.arrange  
+    grid.arrange(p_legend, p1, ncol = 1, heights = c(1, 10))
+    
+    #create nplot of voltage over time
+    p2 <- ggplot(dfs_person[[i]]) +
+    geom_point(aes(x = datetime, y = 3450, color = "timestamp"), 
+                         alpha = 0.6) + #plot where timestamps occur
+    geom_point(aes(x = datetime, y = v, color = "voltage"), alpha = 0.6) + #plot voltage
+    geom_point(data = dfs_person[[i]] %>% filter(!is.na(m_check)),
+                aes(x = datetime, y = 3500, shape = "movement"),
+                width = 0,  
+                height = 10,
+                color = "blue", size = 2) + #plot movement violations
+    #create legend
+    scale_color_manual(
+      values = c("voltage" = "red", "timestamp" = "black"),
+      name = "",
+      labels = c("voltage" = "Voltage", "timestamp" = "Timestamp")) +
+    #shape for movement violations
+    scale_shape_manual(
+      values = c("movement" = 17),  # triangle shape
+      name = "",
+      labels = c("movement" = "Movement Violation")) +
+    scale_y_continuous(limits = c(3400, 4200)) +
+      scale_x_datetime(
+      date_breaks = "6 hours",
+      date_labels = "%m-%d \n%H:%M") +
+    labs(x = "Date", y = "Voltage",
+         title = paste("Figure", 3*(i-1) + 2, "Movement and Voltage \nfor", names(dfs_person)[i])) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+      #plot closeness by time to look for implausable closeness jumps
+      #Identify all columns ending in _lag_diff
+      lag_diff_vars <- names(dfs_person[[i]])[grepl("_lag_diff$", names(dfs_person[[i]]))]
+      
+      #Create a long-format dataframe for plotting
+      long_closeness <- dfs_person[[i]] %>%
+        select(time_diff_min, all_of(lag_diff_vars)) %>%
+        pivot_longer(
+          cols = all_of(lag_diff_vars),
+          names_to = "variable",
+          values_to = "value"
+        ) %>%
+        filter(!is.na(time_diff_min) & !is.na(value))  # Remove rows with NAs
+      
+      #create plot using long-form data
+      p3 <- ggplot(long_closeness, aes(x = time_diff_min, y = value, color = variable)) +
+        geom_point(alpha = 0.5) +
+        labs(x = "Time Difference (min)", y = "Movement Difference from Last Timepoint",
+             color = "Variable", title = paste("Figure", 3*(i-1) + 3, "Closeness across adjacent measures \nfor", names(dfs_person)[i])) +
+        theme_minimal()
+    
+    #print stacked using grid.arrange  
+    grid.arrange(p2, p3, ncol = 1)
+
+#compute percentage of data captured at intervals greater than .5 seconds
+tab1 <- dfs_person[[i]] %>%
+  mutate(category = if_else(time_diff_min < 0.0084, "< 0.0084", ">= 0.0084"),
+         category = factor(category, levels = c("< 0.0084", ">= 0.0084"))) %>% #ensure order is consistent
+  count(category, name = "count")
+
+pct_tab1 <- tab1[2,2]/(tab1[1,2]+tab1[2,2])*100
+
+#print text
+cat('Percentage of data captured at invervals greater .5 seconds in', names(dfs_person)[i], 'is:', round(pct_tab1[[1]], 4), "%\n")
+
+    filtered <- dfs_person[[i]] %>%
+    filter(m_check == 'movement_violation') %>%
+    select(datetime) %>%
+    rename(`Timestamp` = datetime)  # Nice column name
+  
+    print(kable(filtered, caption = 
+                paste("Timestamps of Movement Violations for ", names(dfs_person)[i]),
+        format = "markdown"))
+    
+    #count total number of movement violations
+m_viol <- dfs_person[[i]] %>%
+  count(m_check)
+  
+#count total number of movement recordings
+m_reco <- dfs_person[[i]] %>%
+  count(m) %>%
+  arrange(factor(m, levels = c(FALSE, TRUE, NA)))
+  
+pct_m_viol <- m_viol[1,2]/(m_reco[1,2] + m_reco[2,2])*100
+
+cat('\n')
+cat('Percentage of movement data flagged as movement violation in', names(dfs_person)[i], 'is:', round(pct_m_viol[[1]], 4), "%\n")
+    
+    dfs_person[[i]]$v_check <- factor(dfs_person[[i]]$v_check, 
+                                levels = c('fully charged', 
+                                           'battery low', 
+                                           'battery dead'))
+  
+  voltage_table <- as.data.frame(table(dfs_person[[i]]$v_check))
+  colnames(voltage_table) <- c("Voltage Status", "Count")
+  
+  print(kable(voltage_table, 
+              caption = paste("Voltage Readings for", names(dfs_person)[i])))
+  
+    #print table of time jumps
+    filtered <- dfs_person[[i]] %>%
+    filter(time_diff_min_og < 0) %>%
+    select(datetime, time_diff_min_og, m, v,  matches("^rmm_[A-Za-z0-9]+$"), -matches("^rmm_(0|NA)$")) %>%
+    rename(`Timestamp` = datetime)  
+  
+    print(kable(filtered, caption = 
+                paste("Timestamps of jumps back in time for ", names(dfs_person)[i]),
+        format = "markdown"))
+}
+```
+# Merged Data Quality Checks
+
+This section provides information in potential problematic readings in the merged data, or dataset combining data from all individuals within a family.
+
+The following graphics display discrepancies in closeness measures across matched pairs. The title of each plot ends in a variable name of the form "diff_CG1_TC" where the codes after "diff_" indicate the two indviduals whose difference measures are recorded in the graph in mms. Red dots on the graphics depict datapoints where only one of the two tottags is flagging ranging data.
+
+```{r, echo=FALSE, results = 'asis', fig.width = 6.5, fig.height = 8, warning=FALSE, dev = "png", dpi = 300}
+
+#extract merged family data by selecting df with the most columns
+fam <- dfs[[which.max(sapply(dfs, ncol))]]
+
+#pull variables containing "diff", these will contain potential closeness discrepancies
+fam <- fam %>%
+  select(datetime, starts_with("diff"), starts_with("na"))
+
+#make dataframe from data.table
+fam <- as.data.frame(fam)
+
+#convert all variables but datetime to numeric
+#so NA columns don't crash graphic creation
+fam <- fam %>% mutate(across(-datetime, ~ as.numeric(as.character(.))))
+
+for (i in 2:((ncol(fam)+1)/2)) {
+
+  p1 <- ggplot(data = fam) +
+    geom_point(aes(x = datetime, y = .data[[names(fam)[i]]])) +  #plot differences
+  labs(x = "Date", y = "Difference in Closeness Readings (mm)",
+         title = paste("Difference in Closeness Readings \nfor", names(fam)[i])) +
+  theme_minimal()
+  
+  p2 <- ggplot(data = fam) +
+    geom_point(aes(x = datetime, y = .data[[names(fam)[i]]])) +  #plot differences
+    geom_point(aes(x = datetime, y = .data[[names(fam)[i + ((ncol(fam)-1)/2)]]]), #mark times where only one tottag is ranging
+      color = "red", alpha = .3) +
+  labs(x = "Date", y = "Difference in Closeness Readings (mm)",
+         title = paste("Difference in Closeness Readings \nfor", names(fam)[i], "including data where only one tottag is ranging")) +
+  theme_minimal()
+  
+  grid.arrange(p1, p2, ncol = 1)
+  
+  #compute percentage of data that demonstrates a disagreement
+  tab2 <- fam %>%
+    mutate(category = if_else(fam[,i] == 0, "0", "> 0"),
+           category = factor(category, levels = c("0", "> 0"))) %>% #ensure order is consistent
+    count(category, name = "count")
+  
+  pct_tab2 <- tab2[2,2]/(tab2[1,2]+tab2[2,2])*100
+  
+  #print text
+  cat('\n')
+  cat('Percentage of ranging data (where both tottags are ranging with one another) with a discrepency in tottag distance measures in', names(fam)[i], 'is:', round(pct_tab2, 4), "%\n")
+  
+  #compute percentage of data where only one tottag is flagging ranging data
+  tab3 <- fam %>%
+    mutate(category = if_else(!is.na(fam[, (i + (ncol(fam) - 1) / 2)]), T, F),
+           category = factor(category, levels = c(T, F))) %>% #ensure order is consistent
+    count(category, name = "count")
+  
+  pct_tab3 <- tab3[1,2]/(tab2[1,2]+tab2[2,2]+tab3[1,2])*100
+  
+  #print text
+  cat('\n')
+  cat('Out of all the ranging data between tottags in', names(fam)[i], 'and', names(fam)[i + ((ncol(fam)-1)/2)], round(pct_tab3, 4), '% involves only one of the two tags flagging the ranging. \n')
+  
+  cat('\n')
+}
+```
+
+# Device Performance Checks
+
+The following graphics track device behavior to determine if behavior is normal or suggests a potential problem with a tottag. Issues detected here may not imply data quality is compromised, but may suggest a particular tottag needs to be removed from the pool.
+
+The following tables display voltage readings occurring greater than 5.5 minutes apart. Ideally,  these readings should take place every 5 minutes, so frequent longer stretches of time may suggest a device issue. The graphic plots number of times another tottag was pinged via bluetooth against length of time the target tottag did not range with any other tottags. Long periods of time with frequent bluetooth pings but no ranging could indicate an issue with the device, particularly if the family graphics above suggest another tottag was able to detect ranging with the target tottag.
+
+```{r, echo=FALSE, results = 'asis', fig.width = 7, fig.height = 4, warning=FALSE, dev = "png", dpi = 300}
+for(i in 1:length(dfs_person)) {
+
+  freq_volt <- table(
+      dfs_person[[i]] %>%
+       filter(v_freq > 330) %>%
+       pull(v_freq))
+
+ print(knitr::kable(
+     t(freq_volt),
+     col.names = names(freq_volt),
+     caption = paste("Frequency of voltage readings greater than 5.5 minutes apart for", names(dfs_person)[i])))
+ 
+ if ("BLE_NA_count" %in% names(dfs_person[[i]])) {
+ 
+ p1 <- ggplot(data = dfs_person[[i]], aes(x = rmm_NA, y = BLE_NA_count)) +
+   geom_point() +
+    labs(x = "Length of Time Not Ranging With Any Other Tottag", y = "Number of Bluetooth Pings",
+          title = paste("Tottag Bluetooth Pings for", names(dfs_person)[i], "during non-ranging states")) +
+   theme_minimal()
+ 
+ print(p1)
+ } else {
+   cat("No bluetooth data in", names(dfs_person)[i], "\n")
+ }
+ 
+}
+```
+
+
+
+```{r, include = F}
+#remove all objects except original dataframes, device_dates, and functions
+keep_objects <- ls()[sapply(ls(), function(x) {
+  is.function(get(x)) ||
+    (grepl("^df_", x) && is.data.frame(get(x))) ||
+    x %in% c('device_dates',
+             'folder_path',
+             'age',
+             'false_movement',
+             'zero_ranging')
+})]
+
+rm(list = setdiff(ls(), keep_objects))
+```
+

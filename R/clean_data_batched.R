@@ -1,6 +1,6 @@
 #' @export
 clean_data_batched <- function(folder_path, age, false_movement = 5,
-                               zero_ranging = 5,out_folder_clean) {
+                               zero_ranging = 5, out_folder_clean) {
 
   #load in all .Rdata files in folder_path
   files <- list.files(folder_path, pattern = "\\.RData$", full.names = TRUE)
