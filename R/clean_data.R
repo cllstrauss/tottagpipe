@@ -20,7 +20,7 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
   ###edit internally to clean CARE data
   if (!exists("device_dates", envir = .GlobalEnv)) {
     device_dates <- readxl::read_excel(
-      'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking_CARE.xlsx')
+      'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking.xlsx')
   }
 
   #find corresponding family and wave to extract start
@@ -52,7 +52,7 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
   }
 
   #repopulate dfs from global environment after trimming
-  #dfs <- mget(names(dfs), envir = .GlobalEnv)
+  dfs <- mget(names(dfs), envir = .GlobalEnv)
 
   #store all trimmed dfs except family df into a generic named list to loop through
   person_dfs <- dfs[!grepl("\\d{5}$", names(dfs))]
@@ -400,6 +400,50 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
 
       #repopulate person_dfs from the updated list
       person_dfs <- dfs[!grepl("\\d{5}$", names(dfs))]
+    }
+
+    #if only one ranging column is available proceed here
+    if (target_rmm_person1 %in% names(df1) || target_rmm_person2 %in% names(df2)) {
+
+      #if df1 is missing the ranging variable drop from df1
+      if (!target_rmm_person1 %in% names(df1)) {
+        df1[[target_rmm_person2]] <- NULL
+
+        #find dataframe names in person_dfs to replace
+        df1_name <- names(person_dfs)[grep(paste0("_", person1, "$"), names(person_dfs))]
+        df2_name <- names(person_dfs)[grep(paste0("_", person2, "$"), names(person_dfs))]
+
+        #replace dataframes in global environment with cleaned data
+        assign(df1_name, df1, envir = .GlobalEnv)
+        assign(df2_name, df2, envir = .GlobalEnv)
+
+        #update dfs with edited dataframes
+        dfs[[df1_name]] <- df1
+        dfs[[df2_name]] <- df2
+
+        #repopulate person_dfs from the updated list
+        person_dfs <- dfs[!grepl("\\d{5}$", names(dfs))]
+      }
+
+      #if df2 is missing the ranging variable drop from df1
+      if (!target_rmm_person2 %in% names(df2)) {
+        df1[[target_rmm_person1]] <- NULL
+
+        #find dataframe names in person_dfs to replace
+        df1_name <- names(person_dfs)[grep(paste0("_", person1, "$"), names(person_dfs))]
+        df2_name <- names(person_dfs)[grep(paste0("_", person2, "$"), names(person_dfs))]
+
+        #replace dataframes in global environment with cleaned data
+        assign(df1_name, df1, envir = .GlobalEnv)
+        assign(df2_name, df2, envir = .GlobalEnv)
+
+        #update dfs with edited dataframes
+        dfs[[df1_name]] <- df1
+        dfs[[df2_name]] <- df2
+
+        #repopulate person_dfs from the updated list
+        person_dfs <- dfs[!grepl("\\d{5}$", names(dfs))]
+      }
     }
   }
 
