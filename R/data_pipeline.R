@@ -39,7 +39,7 @@ data_pipeline <- function(folder_path, age,
     graphics_dir <- out_folder_graphics
 
     #create filename for graphics file
-    graphics_rmd <- file.path(graphics_dir, paste0("graphics_", family_id, "_", age, "_V5.Rmd"))
+    graphics_rmd <- file.path(graphics_dir, paste0("graphics_", age, "_", family_id, "_V5.Rmd"))
 
     #locate the graphics template included with the package
     graphics_template <- system.file('GraphicsV5.Rmd', package = "tottagpipe")

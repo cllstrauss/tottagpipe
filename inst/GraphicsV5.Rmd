@@ -43,7 +43,7 @@ age <- unique(sub(paste0(".*_([A-Za-z0-9]+)_", family_id, ".*"), "\\1", names(df
 #read in device dates if not already in global environment
 if (!exists("device_dates", envir = .GlobalEnv)) {
   device_dates <- read_excel(
-    'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking_CARE.xlsx')}
+    'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking.xlsx')}
   
 #find corresponding family and wave to extract start
 #and end date
