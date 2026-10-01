@@ -1,9 +1,7 @@
 #' @export
 data_pipeline <- function(folder_path, age,
-                          false_movement = 5, zero_ranging = 5,
-                          create_graphics = TRUE, clean_data = TRUE,
-                          rmd_file = "graphics_V5.Rmd",
-                          out_folder, out_folder_graphics, out_folder_clean) {
+                          false_movement = 5, zero_ranging = 5, lag_diff_0,
+                          clean_data = TRUE, out_folder, out_folder_clean) {
 
   if (length(folder_path) > 1) {
 
@@ -15,11 +13,8 @@ data_pipeline <- function(folder_path, age,
           age = age,
           false_movement = false_movement,
           zero_ranging = zero_ranging,
-          create_graphics = create_graphics,
           clean_data = clean_data,
-          rmd_file = rmd_file,
           out_folder = out_folder,
-          out_folder_graphics = out_folder_graphics,
           out_folder_clean = out_folder_clean)})
     return(invisible(NULL)) #stop if batched run is called
   }
@@ -28,32 +23,9 @@ data_pipeline <- function(folder_path, age,
   #run prepare data using input folder_path and input age
   prepare_data(folder_path, age, out_folder)
 
-  #extract family id from folder_path outside of if statement
+  #extract 5-digit family id from folder_path outside of if statement
   #so it is identified even if no graphics file is created
   family_id <- sub(".*?([0-9]{5}).*", "\\1", folder_path)
-
-  #create graphics file if create_graphics == TRUE
-  if (create_graphics) {
-
-    #set directory to save graphics files
-    graphics_dir <- out_folder_graphics
-
-    #create filename for graphics file
-    graphics_rmd <- file.path(graphics_dir, paste0("graphics_", age, "_", family_id, "_V5.Rmd"))
-
-    #locate the graphics template included with the package
-    graphics_template <- system.file('GraphicsV5.Rmd', package = "tottagpipe")
-
-    #copy original graphics file into new file name
-    file.copy(from = graphics_template, to = graphics_rmd, overwrite = TRUE)
-
-    #ensure age and family id are readily available in global environment
-    assign("age", age, envir = .GlobalEnv)
-    assign("family_id", family_id, envir = .GlobalEnv)
-
-    #render pdf
-    rmarkdown::render(graphics_rmd, envir = globalenv())
-  }
 
   if (clean_data) {
 
@@ -62,7 +34,7 @@ data_pipeline <- function(folder_path, age,
     dfs <- mget(df_names, envir = .GlobalEnv)
 
     #clean data
-    clean_data(dfs, age, false_movement, zero_ranging, out_folder_clean)
+    clean_data(dfs, age, false_movement, zero_ranging, lag_diff_0, out_folder_clean)
   }
 
 }

@@ -1,5 +1,5 @@
 #' @export
-clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean) {
+clean_data <- function(dfs, age, false_movement, zero_ranging, lag_diff_0, out_folder_clean) {
 
   #create independent copy of dfs to retain original dataframes
   dfs_original <- dfs
@@ -20,7 +20,7 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
   ###edit internally to clean CARE data
   if (!exists("device_dates", envir = .GlobalEnv)) {
     device_dates <- readxl::read_excel(
-      'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking.xlsx')
+      'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking_CARE.xlsx')
   }
 
   #find corresponding family and wave to extract start
@@ -129,8 +129,13 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
     #flag potential off-body rows using user-input false_movement cut off
     #and 0mm ranging cutoff
 
+    #identify lag_diff_0 variables
+    lag_diff_0_cols <- grep('_lag_diff_0$', names(df), value = TRUE)
+
     #define boolean off body vector
-    off_body_boolean <- df$m_FALSE > false_movement | df$rmm_0 > zero_ranging
+    off_body_boolean <- df$m_FALSE > false_movement |
+      df$rmm_0 > zero_ranging |
+      rowSums(df[, lag_diff_0_cols, drop = FALSE] > lag_diff_0, na.rm = TRUE) > 0
 
     #find first and last TRUE in ach run
     first_off_body <- off_body_boolean &
@@ -503,7 +508,7 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, out_folder_clean)
     matched_columns <- lapply(matched_pairs, function(pair) {
       cols <- names(family_df)
       matched <- cols[sapply(cols, function(col) all(sapply(pair, function(p) grepl(p, col))))]
-      matched[!grepl("_lag_diff$", matched) & !grepl("BLE", matched)]
+      matched[!grepl("_lag_diff", matched) & !grepl("BLE", matched)]
     })
 
     #create named variables for all distances

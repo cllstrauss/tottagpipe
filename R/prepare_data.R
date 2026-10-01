@@ -287,7 +287,64 @@ prepare_data <- function(folder_path, age, out_folder) {
             dplyr::relocate(rmm_NA, .after = rmm_0)
         }
 
-        ###variable addition 12: count bluetooth detections during each rmm NA run
+        ###variable addition 12+: time spent with a lag_diff of exactly 0
+
+        #identify all lag variables
+        lag_cols <- grep('lag', names(datarbind), value = TRUE)
+
+        if (length(lag_cols) > 0) {
+
+          for (lag_col in lag_cols) {
+
+            #create name for new duration variable
+            lag_0_col <- paste0(lag_col, '_0')
+
+            datarbind[[lag_0_col]] <- NA_real_
+
+            #identify rows where lag variable is exactly 0
+            has_zero <- datarbind[[lag_col]] == 0
+
+            #identify consecutive runs of zero states
+            lag_0_r <- rle(has_zero)
+
+            lag_0_ends <- cumsum(lag_0_r$lengths)
+            lag_0_starts <- c(1, head(lag_0_ends, -1) + 1)
+
+            lag_0_true_runs <- which(lag_0_r$values)
+
+            lag_0_starts_t <- lag_0_starts[lag_0_true_runs]
+            lag_0_ends_t <- lag_0_ends[lag_0_true_runs]
+
+            #extend each run by one row on both sides
+            #to capture first measure before lag 1
+            #and to compute time through changing state
+            lag_0_starts_t <- pmax(lag_0_starts_t - 1, 1)
+            lag_0_ends_t <- pmin(lag_0_ends_t + 1, nrow(datarbind))
+
+            #calculate duration in minutes
+            lag_0_duration <- (datarbind$t[lag_0_ends_t] - datarbind$t[lag_0_starts_t]) / 60
+
+            #expand run indices to individual rows
+            lag_0_idx <- unlist(Map(seq, lag_0_starts_t, lag_0_ends_t))
+
+            #assign duration to all rows in each run
+            datarbind[[lag_0_col]][lag_0_idx] <- rep(
+              lag_0_duration,
+              times = lag_0_ends_t - lag_0_starts_t + 1
+            )
+
+            #relocate immediately after original lag variable
+            lag_pos <- match(lag_col, names(datarbind))
+
+            datarbind <- datarbind %>%
+              dplyr::relocate(
+                all_of(lag_0_col),
+                .after = lag_pos
+              )
+          }
+        }
+
+        ###variable addition 13: count bluetooth detections during each rmm NA run
 
         ble_cols <- grep("^BLE_", names(datarbind), value = TRUE) #identify all BLE cols
 
@@ -375,7 +432,7 @@ prepare_data <- function(folder_path, age, out_folder) {
     matched_columns <- lapply(matched_pairs, function(pair) {
       cols <- names(family_df)
       matched <- cols[sapply(cols, function(col) all(sapply(pair, function(p) grepl(p, col))))]
-      matched[!grepl("_lag_diff$", matched) & !grepl("BLE", matched)]
+      matched[!grepl("_lag_diff", matched) & !grepl("BLE", matched)]
     })
 
     #create named variables for all distances
