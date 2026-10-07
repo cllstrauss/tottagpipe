@@ -480,7 +480,7 @@ prepare_data <- function(folder_path, age, out_folder) {
   print('saving all data to server')
   for (df in all_dfs){
     setwd(out_folder)
-    save(list = df, file = paste0(df, '.RData'))
+    write.csv(get(df), file = paste0(df, '.csv'), row.names = FALSE)
 
   }
 

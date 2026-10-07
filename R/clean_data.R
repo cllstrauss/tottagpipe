@@ -556,7 +556,7 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, lag_diff_0, out_f
   print('Saving cleaned data to server')
 
   for (df_name in names(person_dfs_cleaned)) {
-    save(list = df_name, file = file.path(out_folder_clean, paste0(df_name, ".RData")))
+    write.csv(person_dfs_cleaned[[df_name]], file = file.path(out_folder_clean, paste0(df_name, '.csv')), row.names = FALSE)
   }
 
 }

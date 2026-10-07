@@ -23,7 +23,7 @@
 #' list_folders('X:/Daily_2/ABC/tottag R code/Chris Processed/Batch Test/testData')
 #'
 #' @export
-list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T) {
+list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T, one_file_filter = T) {
 
   #creates a list of all subfolders in folder_path
   subfolders <- list.dirs(folder_path, recursive = FALSE, full.names = TRUE)
@@ -35,6 +35,7 @@ list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T) 
   #initialize diagnostics
   one_kb_files <- character(0)
   invalid_names <- character(0)
+  one_file_folders <- character(0)
 
   #extract file sizes is filter is set to T
   if (one_kb_filter) {
@@ -70,8 +71,26 @@ list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T) 
     } #end internal if statement
   } #end file naming scheme check
 
+  #extract file sizes is filter is set to T
+  if (one_file_filter) {
+    #count the number of pkl files in each folder
+    file_counts <- table(dirname(pkl_files))
+
+    #identify folders containing only one .pkl file
+    one_file_folders <- names(file_counts[file_counts == 1])
+
+    #print warning if any folders contain only one .pkl file
+    if (length(one_file_folders) > 0) {
+      warning(
+        length(one_file_folders), ' folder(s) contain only one .pkl file. ',
+        'Access with attr(result, "one_file_folders"). ',
+        'These folders will be dropped from the final folder list.')
+    } #end internal if statement
+
+  } #end check for folders with only one file
+
   #locate all problematic .pkl files
-  problem_folders <- dirname(c(one_kb_files, invalid_names))
+  problem_folders <- dirname(c(one_kb_files, invalid_names, one_file_folders))
 
   #remove problematic folders from outputted folder list
   final_list <- setdiff(unique(dirname(pkl_files)), problem_folders)
@@ -79,6 +98,7 @@ list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T) 
   #attach diagnostic information
   attr(final_list, "one_kb_files") <- one_kb_files
   attr(final_list, "invalid_names") <- invalid_names
+  attr(final_list, "one_file_folders") <- one_file_folders
 
   return(final_list)
 }
