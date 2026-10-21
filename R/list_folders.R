@@ -90,7 +90,7 @@ list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T, 
   } #end check for folders with only one file
 
   #locate all problematic .pkl files
-  problem_folders <- dirname(c(one_kb_files, invalid_names, one_file_folders))
+  problem_folders <- c(dirname(one_kb_files), dirname(invalid_names), one_file_folders)
 
   #remove problematic folders from outputted folder list
   final_list <- setdiff(unique(dirname(pkl_files)), problem_folders)

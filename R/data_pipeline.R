@@ -1,7 +1,7 @@
 #' @export
 data_pipeline <- function(folder_path, age,
-                          false_movement = 5, zero_ranging = 5, lag_diff_0,
-                          clean_data = TRUE, out_folder, out_folder_clean) {
+                          false_movement = 5, zero_ranging = 1, lag_diff_0 = 1,
+                          clean_data = TRUE, device_dates, out_folder, out_folder_clean) {
 
   if (length(folder_path) > 1) {
 
@@ -13,6 +13,8 @@ data_pipeline <- function(folder_path, age,
           age = age,
           false_movement = false_movement,
           zero_ranging = zero_ranging,
+          lag_diff_0 = lag_diff_0,
+          device_dates = device_dates,
           clean_data = clean_data,
           out_folder = out_folder,
           out_folder_clean = out_folder_clean)})
@@ -34,7 +36,7 @@ data_pipeline <- function(folder_path, age,
     dfs <- mget(df_names, envir = .GlobalEnv)
 
     #clean data
-    clean_data(dfs, age, false_movement, zero_ranging, lag_diff_0, out_folder_clean)
+    clean_data(dfs, age, false_movement, zero_ranging, lag_diff_0, out_folder_clean, device_dates)
   }
 
 }

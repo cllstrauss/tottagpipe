@@ -1,5 +1,5 @@
 #' @export
-clean_data <- function(dfs, age, false_movement, zero_ranging, lag_diff_0, out_folder_clean) {
+clean_data <- function(dfs, age, false_movement, zero_ranging, lag_diff_0, out_folder_clean, device_dates) {
 
   #create independent copy of dfs to retain original dataframes
   dfs_original <- dfs
@@ -15,13 +15,6 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, lag_diff_0, out_f
 
   #extract five digit code from dataframes
   family_id <- sub(".*?(\\d{5}).*", "\\1", names(dfs[1]))
-
-  #read in device dates if not already in global environment
-  ###edit internally to clean CARE data
-  if (!exists("device_dates", envir = .GlobalEnv)) {
-    device_dates <- readxl::read_excel(
-      'X:/Daily_2/ABC/tottag R code/Current Cleaning Process/Device Date Use Generator/Device_Date_Tracking_CARE.xlsx')
-  }
 
   #find corresponding family and wave to extract start
   #and end date
@@ -127,7 +120,7 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, lag_diff_0, out_f
     }
 
     #flag potential off-body rows using user-input false_movement cut off
-    #and 0mm ranging cutoff
+    #0mm ranging cutoff, and 0 lag cutoff
 
     #identify lag_diff_0 variables
     lag_diff_0_cols <- grep('_lag_diff_0$', names(df), value = TRUE)

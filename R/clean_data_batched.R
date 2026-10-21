@@ -1,6 +1,6 @@
 #' @export
 clean_data_batched <- function(folder_path, age, false_movement = 5,
-                               zero_ranging = 5, out_folder_clean) {
+                               zero_ranging = 5, out_folder_clean, device_dates) {
 
   #load in all .Rdata files in folder_path
   files <- list.files(folder_path, pattern = "\\.RData$", full.names = TRUE)
@@ -28,12 +28,12 @@ clean_data_batched <- function(folder_path, age, false_movement = 5,
 
 
       # Make sure the current family's dataframes are in the global env
-      #are available in the global environment
       list2env(family_dfs,envir = .GlobalEnv)
 
       #run clean_data
       clean_data(dfs = family_dfs, age = age, false_movement = false_movement,
-        zero_ranging = zero_ranging, out_folder_clean = out_folder_clean)
+        zero_ranging = zero_ranging, out_folder_clean = out_folder_clean,
+        device_dates = device_dates)
 
       invisible(family_dfs)
     }
