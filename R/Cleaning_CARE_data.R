@@ -14,6 +14,12 @@ library(tottagpipe)
 #function to identify files that can be processed and cleaned with
 #tottagpipe
 
+#one time only: install function to read in excel files
+install.packages('readxl')
+
+#load readxl
+library(readxl)
+
 #you may need to make slight updates to the path file
 folders <- list_folders('X:/Daily_2/ABC/CARE/TotTag Files')
 
