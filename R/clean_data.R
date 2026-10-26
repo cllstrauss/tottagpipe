@@ -41,11 +41,11 @@ clean_data <- function(dfs, age, false_movement, zero_ranging, lag_diff_0, out_f
   empty_dfs <- names(dfs)[sapply(names(dfs), function(x) nrow(get(x, envir = .GlobalEnv)) == 0)]
 
   if (length(empty_dfs) > 0) {
-    stop("ERROR: The following data frames have 0 rows after trimming: ", paste(empty_dfs, collapse = ", "))
+    warning("ERROR: The following data frames have 0 rows after trimming: ", paste(empty_dfs, collapse = ", "))
   }
 
-  #repopulate dfs from global environment after trimming
-  dfs <- mget(names(dfs), envir = .GlobalEnv)
+  #repopulate dfs from global environment after trimming, excluding empty dfs
+  dfs <- mget(setdiff(names(dfs), empty_dfs), envir = .GlobalEnv)
 
   #store all trimmed dfs except family df into a generic named list to loop through
   person_dfs <- dfs[!grepl("\\d{5}$", names(dfs))]
