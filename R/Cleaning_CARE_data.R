@@ -1,24 +1,24 @@
 #one time only: install the remotes R package
-install.packages('remotes')
+#install.packages('remotes')
 
 #each time you log onto R: load in the remotes R package
-library(remotes)
+#library(remotes)
 
 #install pipeline from Chris's github
-install_github("cllstrauss/tottagpipe")
+#install_github("cllstrauss/tottagpipe")
 
 #load pipeline
-library(tottagpipe)
+#library(tottagpipe)
 
 #go through files that contain CARE data and use the list_folders
 #function to identify files that can be processed and cleaned with
 #tottagpipe
 
 #one time only: install function to read in excel files
-install.packages('readxl')
+#install.packages('readxl')
 
 #load readxl
-library(readxl)
+#library(readxl)
 
 #you may need to make slight updates to the path file
 folders <- list_folders('X:/Daily_2/ABC/CARE/TotTag Files')
