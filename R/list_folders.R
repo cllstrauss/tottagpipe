@@ -23,7 +23,7 @@
 #' list_folders('X:/Daily_2/ABC/tottag R code/Chris Processed/Batch Test/testData')
 #'
 #' @export
-list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T, one_file_filter = T) {
+list_folders <- function(folder_path, file_names_filter = T, one_file_filter = T) {
 
   #creates a list of all subfolders in folder_path
   subfolders <- list.dirs(folder_path, recursive = FALSE, full.names = TRUE)
@@ -33,25 +33,8 @@ list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T, 
                           recursive = F, full.names = T)
 
   #initialize diagnostics
-  one_kb_files <- character(0)
   invalid_names <- character(0)
   one_file_folders <- character(0)
-
-  #extract file sizes is filter is set to T
-  if (one_kb_filter) {
-  file_sizes <- file.info(pkl_files)$size
-
-    #define small files as files at or less than 1KB
-    one_kb_files <- pkl_files[file_sizes <= 1000]
-
-    #print warning if any files are 1KB or less
-    if (length(one_kb_files) > 0) {
-      warning(
-        length(one_kb_files), ' .pkl file(s) are 1 KB or smaller. ',
-        'Access with attr(result, "one_kb_files"). ',
-        'Folders containing these .pkl files will be dropped from the final folder list.')
-    } #end internal if statement
-  } #end file size check
 
   #check that all pickle files follow appropriate naming scheme if filter is set to T
   if (file_names_filter) {
@@ -90,13 +73,12 @@ list_folders <- function(folder_path, one_kb_filter = T, file_names_filter = T, 
   } #end check for folders with only one file
 
   #locate all problematic .pkl files
-  problem_folders <- c(dirname(one_kb_files), dirname(invalid_names), one_file_folders)
+  problem_folders <- c(dirname(invalid_names), one_file_folders)
 
   #remove problematic folders from outputted folder list
   final_list <- setdiff(unique(dirname(pkl_files)), problem_folders)
 
   #attach diagnostic information
-  attr(final_list, "one_kb_files") <- one_kb_files
   attr(final_list, "invalid_names") <- invalid_names
   attr(final_list, "one_file_folders") <- one_file_folders
 

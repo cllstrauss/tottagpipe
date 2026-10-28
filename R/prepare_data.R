@@ -357,7 +357,7 @@ prepare_data <- function(folder_path, age, out_folder) {
           if (length(na_runs) > 0) {
 
             #convert multiple BLE columns to a logical matrix once
-            ble_mat <- as.matrix(datarbind[, ble_cols, drop = FALSE])
+            ble_mat <- as.matrix(datarbind[, ..ble_cols])
 
             #count total BLE pings across ALL tottags within each rmm_na run
             ble_counts <- mapply(
@@ -367,7 +367,7 @@ prepare_data <- function(folder_path, age, out_folder) {
             )
 
             #store the count one time at the end of the run
-            datarbind$BLE_NA_count[rmm_na_ends_t] <- ble_counts
+            datarbind$BLE_NA_count[rmm_na_ends_t -1] <- ble_counts
 
             #relocate to after original rmm_0
             datarbind <- datarbind %>%
